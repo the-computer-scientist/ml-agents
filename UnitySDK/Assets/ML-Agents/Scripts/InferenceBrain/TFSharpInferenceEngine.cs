@@ -195,7 +195,7 @@ namespace MLAgents.InferenceBrain
             return t;
         }
 
-        public IReadOnlyList<Tensor> InputFeatures()
+        public IEnumerable<Tensor> InputFeatures()
         {
             List<Tensor> inputs = new List<Tensor>();
             foreach (var op in m_graph.GetEnumerator())

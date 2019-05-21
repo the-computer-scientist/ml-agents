@@ -97,7 +97,7 @@ namespace MLAgents
                 property.FindPropertyRelative(NumVecObsPropName),
                 new GUIContent("Stacked Vectors",
                     "Number of states that will be stacked before " +
-                    "being fed to the neural network."));
+                    "beeing fed to the neural network."));
             position.y += LineHeight;
             EditorGUI.indentLevel--; 
         }

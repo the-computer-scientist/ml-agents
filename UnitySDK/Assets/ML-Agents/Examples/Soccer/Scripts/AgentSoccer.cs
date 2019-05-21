@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 using MLAgents;
 
 public class AgentSoccer : Agent
@@ -6,23 +8,19 @@ public class AgentSoccer : Agent
 
     public enum Team
     {
-        Red, 
-        Blue
+        red, blue
     }
     public enum AgentRole
     {
-        Striker, 
-        Goalie
+        striker, goalie
     }
-    
     public Team team;
     public AgentRole agentRole;
     float kickPower;
     int playerIndex;
     public SoccerFieldArea area;
-    
     [HideInInspector]
-    public Rigidbody agentRb;
+    public Rigidbody agentRB;
     SoccerAcademy academy;
     Renderer agentRenderer;
     RayPerception rayPer;
@@ -30,30 +28,21 @@ public class AgentSoccer : Agent
     public void ChooseRandomTeam()
     {
         team = (Team)Random.Range(0, 2);
-        if (team == Team.Red)
-        {
-            JoinRedTeam(agentRole);
-        }
-        else
-        {
-            JoinBlueTeam(agentRole);
-        }
+        agentRenderer.material = team == Team.red ? academy.redMaterial : academy.blueMaterial;
     }
 
     public void JoinRedTeam(AgentRole role)
     {
         agentRole = role;
-        team = Team.Red;
+        team = Team.red;
         agentRenderer.material = academy.redMaterial;
-        tag = "redAgent";
     }
 
     public void JoinBlueTeam(AgentRole role)
     {
         agentRole = role;
-        team = Team.Blue;
+        team = Team.blue;
         agentRenderer.material = academy.blueMaterial;
-        tag = "blueAgent";
     }
 
     public override void InitializeAgent()
@@ -62,15 +51,12 @@ public class AgentSoccer : Agent
         agentRenderer = GetComponent<Renderer>();
         rayPer = GetComponent<RayPerception>();
         academy = FindObjectOfType<SoccerAcademy>();
-        agentRb = GetComponent<Rigidbody>();
-        agentRb.maxAngularVelocity = 500;
-
-        var playerState = new PlayerState
-        {
-            agentRB = agentRb, 
-            startingPos = transform.position, 
-            agentScript = this,
-        };
+        PlayerState playerState = new PlayerState();
+        playerState.agentRB = GetComponent<Rigidbody>();
+        agentRB = GetComponent<Rigidbody>();
+        agentRB.maxAngularVelocity = 500;
+        playerState.startingPos = transform.position;
+        playerState.agentScript = this;
         area.playerStates.Add(playerState);
         playerIndex = area.playerStates.IndexOf(playerState);
         playerState.playerIndex = playerIndex;
@@ -81,14 +67,14 @@ public class AgentSoccer : Agent
         float rayDistance = 20f;
         float[] rayAngles = { 0f, 45f, 90f, 135f, 180f, 110f, 70f };
         string[] detectableObjects;
-        if (team == Team.Red)
+        if (team == Team.red)
         {
-            detectableObjects = new[] { "ball", "redGoal", "blueGoal",
+            detectableObjects = new string[] { "ball", "redGoal", "blueGoal",
                 "wall", "redAgent", "blueAgent" };
         }
         else
         {
-            detectableObjects = new[] { "ball", "blueGoal", "redGoal",
+            detectableObjects = new string[] { "ball", "blueGoal", "redGoal",
                 "wall", "blueAgent", "redAgent" };
         }
         AddVectorObs(rayPer.Perceive(rayDistance, rayAngles, detectableObjects, 0f, 0f));
@@ -103,7 +89,7 @@ public class AgentSoccer : Agent
         int action = Mathf.FloorToInt(act[0]);
 
         // Goalies and Strikers have slightly different action spaces.
-        if (agentRole == AgentRole.Goalie)
+        if (agentRole == AgentRole.goalie)
         {
             kickPower = 0f;
             switch (action)
@@ -150,7 +136,7 @@ public class AgentSoccer : Agent
             }
         }
         transform.Rotate(rotateDir, Time.deltaTime * 100f);
-        agentRb.AddForce(dirToGo * academy.agentRunSpeed,
+        agentRB.AddForce(dirToGo * academy.agentRunSpeed,
                          ForceMode.VelocityChange);
 
     }
@@ -159,12 +145,12 @@ public class AgentSoccer : Agent
     public override void AgentAction(float[] vectorAction, string textAction)
     {
         // Existential penalty for strikers.
-        if (agentRole == AgentRole.Striker)
+        if (agentRole == AgentRole.striker)
         {
             AddReward(-1f / 3000f);
         }
         // Existential bonus for goalies.
-        if (agentRole == AgentRole.Goalie)
+        if (agentRole == AgentRole.goalie)
         {
             AddReward(1f / 3000f);
         }
@@ -178,13 +164,14 @@ public class AgentSoccer : Agent
     void OnCollisionEnter(Collision c)
     {
         float force = 2000f * kickPower;
-        if (c.gameObject.CompareTag("ball"))
+        if (c.gameObject.tag == "ball")
         {
             Vector3 dir = c.contacts[0].point - transform.position;
             dir = dir.normalized;
             c.gameObject.GetComponent<Rigidbody>().AddForce(dir * force);
         }
     }
+
 
     public override void AgentReset()
     {
@@ -193,7 +180,7 @@ public class AgentSoccer : Agent
             ChooseRandomTeam();
         }
 
-        if (team == Team.Red)
+        if (team == Team.red)
         {
             JoinRedTeam(agentRole);
             transform.rotation = Quaternion.Euler(0f, -90f, 0f);
@@ -203,9 +190,15 @@ public class AgentSoccer : Agent
             JoinBlueTeam(agentRole);
             transform.rotation = Quaternion.Euler(0f, 90f, 0f);
         }
-        transform.position = area.GetRandomSpawnPos(agentRole, team);
-        agentRb.velocity = Vector3.zero;
-        agentRb.angularVelocity = Vector3.zero;
+        transform.position = area.GetRandomSpawnPos(team.ToString(),
+                                                    agentRole.ToString());
+        agentRB.velocity = Vector3.zero;
+        agentRB.angularVelocity = Vector3.zero;
         area.ResetBall();
+    }
+
+    public override void AgentOnDone()
+    {
+
     }
 }

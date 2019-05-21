@@ -81,12 +81,6 @@ namespace MLAgents
         public int id;
 
         /// <summary>
-        /// User-customizable object for sending structured output from Unity to Python in response
-        /// to an action in addition to a scalar reward.
-        /// </summary>
-        public CustomObservation customObservation;
-
-        /// <summary>
         /// Converts a AgentInfo to a protobuffer generated AgentInfoProto
         /// </summary>
         /// <returns>The protobuf verison of the AgentInfo.</returns>
@@ -103,7 +97,6 @@ namespace MLAgents
                 MaxStepReached = maxStepReached,
                 Done = done,
                 Id = id,
-                CustomObservation = customObservation
             };
             if (memories != null)
             {
@@ -136,7 +129,6 @@ namespace MLAgents
         public string textActions;
         public List<float> memories;
         public float value;
-        public CommunicatorObjects.CustomAction customAction;
     }
 
     /// <summary>
@@ -152,13 +144,6 @@ namespace MLAgents
         /// observations.
         /// </summary>
         public List<Camera> agentCameras = new List<Camera>();
-        
-        /// <summary>
-        /// The list of the RenderTextures the agent uses for visual
-        /// observations.
-        /// </summary>
-        public List<RenderTexture> agentRenderTextures = new List<RenderTexture>();
-
 
         /// <summary>
         /// The maximum number of steps the agent takes before being done. 
@@ -327,9 +312,8 @@ namespace MLAgents
         /// becomes enabled or active.
         void OnEnable()
         {
-            var textureCount = agentParameters.agentCameras.Count+agentParameters.agentRenderTextures.Count;
-            textureArray = new Texture2D[textureCount];
-            for (int i = 0; i < textureCount; i++)
+            textureArray = new Texture2D[agentParameters.agentCameras.Count];
+            for (int i = 0; i < agentParameters.agentCameras.Count; i++)
             {
                 textureArray[i] = new Texture2D(1, 1, TextureFormat.RGB24, false);
             }
@@ -557,7 +541,6 @@ namespace MLAgents
                           * param.numStackedVectorObservations]);
 
             info.visualObservations = new List<Texture2D>();
-            info.customObservation = null;
         }
 
         /// <summary>
@@ -608,36 +591,22 @@ namespace MLAgents
             info.stackedVectorObservation.AddRange(info.vectorObservation);
 
             info.visualObservations.Clear();
-            var visualObservationCount = agentParameters.agentCameras.Count+agentParameters.agentRenderTextures.Count;
-            if (param.cameraResolutions.Length > visualObservationCount)
+            if (param.cameraResolutions.Length > agentParameters.agentCameras.Count)
             {
                 throw new UnityAgentsException(string.Format(
-                    "Not enough cameras/renderTextures for agent {0} : Brain {1} expecting at " +
-                    "least {2} cameras/renderTextures but only {3} were present.",
+                    "Not enough cameras for agent {0} : Bain {1} expecting at " +
+                    "least {2} cameras but only {3} were present.",
                     gameObject.name, brain.name,
                     brain.brainParameters.cameraResolutions.Length,
-                    visualObservationCount));
+                    agentParameters.agentCameras.Count));
             }
 
-            //First add all cameras
-            for (int i = 0; i < agentParameters.agentCameras.Count; i++)
+            for (int i = 0; i < brain.brainParameters.cameraResolutions.Length; i++)
             {
                 ObservationToTexture(
                     agentParameters.agentCameras[i],
                     param.cameraResolutions[i].width,
                     param.cameraResolutions[i].height,
-                    ref textureArray[i]);
-                info.visualObservations.Add(textureArray[i]);
-            }
-            
-            //Then add all renderTextures
-            var camCount = agentParameters.agentCameras.Count;
-            for (int i = 0; i < agentParameters.agentRenderTextures.Count; i++)
-            {
-                ObservationToTexture(
-                    agentParameters.agentRenderTextures[i],
-                    param.cameraResolutions[camCount+i].width,
-                    param.cameraResolutions[camCount+i].height,
                     ref textureArray[i]);
                 info.visualObservations.Add(textureArray[i]);
             }
@@ -712,7 +681,7 @@ namespace MLAgents
         /// <param name="actionIndex">The index of the masked action on branch 0</param>
         protected void SetActionMask(int actionIndex)
         {
-            actionMasker.SetActionMask(0, new int[1] { actionIndex });
+            actionMasker.SetActionMask(0, new int[1] {actionIndex});
         }
 
         /// <summary>
@@ -725,7 +694,7 @@ namespace MLAgents
         /// <param name="actionIndex">The index of the masked action</param>
         protected void SetActionMask(int branch, int actionIndex)
         {
-            actionMasker.SetActionMask(branch, new int[1] { actionIndex });
+            actionMasker.SetActionMask(branch, new int[1] {actionIndex});
         }
 
         /// <summary>
@@ -848,25 +817,6 @@ namespace MLAgents
         }
 
         /// <summary>
-        /// Specifies the agent behavior at every step based on the provided
-        /// action.
-        /// </summary>
-        /// <param name="vectorAction">
-        /// Vector action. Note that for discrete actions, the provided array
-        /// will be of length 1.
-        /// </param>
-        /// <param name="textAction">Text action.</param>
-        /// <param name="customAction">
-        /// A custom action, defined by the user as custom protobuffer message. Useful if the action is hard to encode
-        /// as either a flat vector or a single string.
-        /// </param>
-        public virtual void AgentAction(float[] vectorAction, string textAction, CommunicatorObjects.CustomAction customAction)
-        {
-            // We fall back to not using the custom action if the subclassed Agent doesn't override this method.
-            AgentAction(vectorAction, textAction);
-        }
-
-        /// <summary>
         /// Specifies the agent behavior when done and 
         /// <see cref="AgentParameters.resetOnDone"/> is false. This method can be
         /// used to remove the agent from the scene.
@@ -925,15 +875,6 @@ namespace MLAgents
         public void UpdateTextAction(string textActions)
         {
             action.textActions = textActions;
-        }
-
-        /// <summary>
-        /// Updates the custom action.
-        /// </summary>
-        /// <param name="customAction">Custom action.</param>
-        public void UpdateCustomAction(CommunicatorObjects.CustomAction customAction)
-        {
-            action.customAction = customAction;
         }
 
         /// <summary>
@@ -1065,7 +1006,7 @@ namespace MLAgents
             if ((requestAction) && (brain != null))
             {
                 requestAction = false;
-                AgentAction(action.vectorActions, action.textActions, action.customAction);
+                AgentAction(action.vectorActions, action.textActions);
             }
 
             if ((stepCount >= agentParameters.maxStep)
@@ -1137,44 +1078,5 @@ namespace MLAgents
             RenderTexture.active = prevActiveRT;
             RenderTexture.ReleaseTemporary(tempRT);
         }
-        
-        /// <summary>
-        /// Converts a RenderTexture and correspinding resolution to a 2D texture.
-        /// </summary>
-        /// <returns>The 2D texture.</returns>
-        /// <param name="obsTexture">RenderTexture.</param>
-        /// <param name="width">Width of resulting 2D texture.</param>
-        /// <param name="height">Height of resulting 2D texture.</param>
-        /// <param name="texture2D">Texture2D to render to.</param>
-        public static void ObservationToTexture(RenderTexture obsTexture, int width, int height, ref Texture2D texture2D)
-        {
-            if (width != texture2D.width || height != texture2D.height)
-            {
-                texture2D.Resize(width, height);
-            }
-            
-            if(width != obsTexture.width || height != obsTexture.height)
-            {
-                throw new UnityAgentsException(string.Format(
-                    "RenderTexture {0} : width/height is {1}/{2} brain is expecting {3}/{4}.",
-                    obsTexture.name, obsTexture.width, obsTexture.height, width, height));
-            }
-
-            var prevActiveRT = RenderTexture.active;
-            RenderTexture.active = obsTexture;
-
-            texture2D.ReadPixels(new Rect(0, 0, texture2D.width, texture2D.height), 0, 0);
-            texture2D.Apply();
-            RenderTexture.active = prevActiveRT;
-        }
-
-        /// <summary>
-        /// Sets the custom observation for the agent for this episode.
-        /// </summary>
-        /// <param name="customObservation">New value of the agent's custom observation.</param>
-        public void SetCustomObservation(CustomObservation customObservation)
-        {
-            info.customObservation = customObservation;
-        }
-    }    
+    }
 }

@@ -284,7 +284,6 @@ namespace MLAgents
                     agent.UpdateMemoriesAction(action.Memories.ToList());
                     agent.UpdateTextAction(action.TextActions);
                     agent.UpdateValueAction(action.Value);
-                    agent.UpdateCustomAction(action.CustomAction);
                 }
             }
         }

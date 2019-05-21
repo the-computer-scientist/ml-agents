@@ -108,7 +108,7 @@ public class SoccerFieldArea : MonoBehaviour
                 ps.agentScript.ChooseRandomTeam();
             }
 
-            if (scoredTeam == AgentSoccer.Team.Red)
+            if (scoredTeam == AgentSoccer.Team.red)
             {
                 StartCoroutine(GoalScoredSwapGroundMaterial(academy.redMaterial, 1));
             }
@@ -125,11 +125,11 @@ public class SoccerFieldArea : MonoBehaviour
 
     public void RewardOrPunishPlayer(PlayerState ps, float striker, float goalie)
     {
-        if (ps.agentScript.agentRole == AgentSoccer.AgentRole.Striker)
+        if (ps.agentScript.agentRole == AgentSoccer.AgentRole.striker)
         {
             ps.agentScript.AddReward(striker);
         }
-        if (ps.agentScript.agentRole == AgentSoccer.AgentRole.Goalie)
+        if (ps.agentScript.agentRole == AgentSoccer.AgentRole.goalie)
         {
             ps.agentScript.AddReward(goalie);
         }
@@ -137,33 +137,35 @@ public class SoccerFieldArea : MonoBehaviour
     }
 
 
-    public Vector3 GetRandomSpawnPos(AgentSoccer.AgentRole role, AgentSoccer.Team team)
+    public Vector3 GetRandomSpawnPos(string type, string position)
     {
+        Vector3 randomSpawnPos = Vector3.zero;
         float xOffset = 0f;
-        if (role == AgentSoccer.AgentRole.Goalie)
+        if (type == "red")
         {
-            xOffset = 13f;
+            if (position == "goalie")
+            {
+                xOffset = 13f;
+            }
+            if (position == "striker")
+            {
+                xOffset = 7f;
+            }
         }
-        if (role == AgentSoccer.AgentRole.Striker)
+        if (type == "blue")
         {
-            xOffset = 7f;
+            if (position == "goalie")
+            {
+                xOffset = -13f;
+            }
+            if (position == "striker")
+            {
+                xOffset = -7f;
+            }
         }
-        if (team == AgentSoccer.Team.Blue)
-        {
-            xOffset = xOffset * -1f;
-        }
-        var randomSpawnPos = ground.transform.position + 
+        randomSpawnPos = ground.transform.position + 
                                new Vector3(xOffset, 0f, 0f) 
                                + (Random.insideUnitSphere * 2);
-        randomSpawnPos.y = ground.transform.position.y + 2;
-        return randomSpawnPos;
-    }
-
-    public Vector3 GetBallSpawnPosition()
-    {
-        var randomSpawnPos = ground.transform.position + 
-                             new Vector3(0f, 0f, 0f) 
-                             + (Random.insideUnitSphere * 2);
         randomSpawnPos.y = ground.transform.position.y + 2;
         return randomSpawnPos;
     }
@@ -175,7 +177,7 @@ public class SoccerFieldArea : MonoBehaviour
 
     public void ResetBall()
     {
-        ball.transform.position = GetBallSpawnPosition();
+        ball.transform.position = GetRandomSpawnPos("ball", "ball");
         ballRB.velocity = Vector3.zero;
         ballRB.angularVelocity = Vector3.zero;
     }

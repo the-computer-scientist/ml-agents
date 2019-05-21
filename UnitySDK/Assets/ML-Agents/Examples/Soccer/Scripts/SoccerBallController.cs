@@ -28,11 +28,11 @@ public class SoccerBallController : MonoBehaviour
     {
         if (col.gameObject.CompareTag(redGoalTag)) //ball touched red goal
         {
-            area.GoalTouched(AgentSoccer.Team.Blue);
+            area.GoalTouched(AgentSoccer.Team.blue);
         }
         if (col.gameObject.CompareTag(blueGoalTag)) //ball touched blue goal
         {
-            area.GoalTouched(AgentSoccer.Team.Red);
+            area.GoalTouched(AgentSoccer.Team.red);
         }
     }
 }
